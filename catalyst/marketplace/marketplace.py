@@ -209,13 +209,28 @@ class Marketplace:
         return pd.DataFrame(data)
 
     def list(self):
-        df = self._list()
-
+        num_data_sources = self.mkt_contract.functions.getProviderNamesSize().call()
+        data_sources = [self.mkt_contract.functions.getNameAt(x).call() for x in range(num_data_sources)]
+        data = []
+        for index, data_source in enumerate(data_sources):
+            if index >= 0:
+                provider_info = self.mkt_contract.functions.getDataProviderInfo(
+                    Web3.toHex(data_source)
+                ).call()
+                if 'test' not in Web3.toText(data_source).lower():
+                    data.append(
+                        dict(
+                            dataset=self.to_text(data_source),
+                            price=from_grains(provider_info[1]),
+                            subscribers=provider_info[3]
+                        )
+                    )
+        df = pd.DataFrame(data)
+        url = 'https://enigma.co/marketplace/status/'
         set_print_settings()
-        if df.empty:
-            print('There are no datasets available yet.')
-        else:
-            print(df)
+        print('\nVisit {url} for additional information on data sources.\n\n{df}'.format(
+            url=url,
+            df=df))
 
     def subscribe(self, dataset=None):
 
@@ -264,17 +279,7 @@ class Marketplace:
             address, Web3.toHex(dataset)
         ).call()
 
-        if subscribed[5]:
-            print(
-                '\nYou are already subscribed to the "{}" dataset.\n'
-                'Your subscription started on {} UTC, and is valid until '
-                '{} UTC.'.format(
-                    dataset,
-                    pd.to_datetime(subscribed[3], unit='s', utc=True),
-                    pd.to_datetime(subscribed[4], unit='s', utc=True)
-                )
-            )
-            return
+
 
         print('\nThe price for a monthly subscription to this dataset is'
               ' {} ENG'.format(price))
@@ -474,6 +479,9 @@ class Marketplace:
         provider_info = self.mkt_contract.functions.getDataProviderInfo(
             Web3.toHex(ds_name)
         ).call()
+
+        print(provider_info)
+
 
         if not provider_info[4]:
             print('The requested "{}" dataset is not registered in '
