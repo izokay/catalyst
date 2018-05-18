@@ -2,6 +2,60 @@
 Release Notes
 =============
 
+Version 0.5.11
+^^^^^^^^^^^^^^
+**Release Date**: 2018-05-09
+
+Bug Fixes
+~~~~~~~~~
+- Added missing start_date argument on live mode when running on cli
+  :issue:`330`
+- Updated the start and end arguments used on cli in live mode to include
+  time information in addition to the date.
+
+Version 0.5.10
+^^^^^^^^^^^^^^
+**Release Date**: 2018-05-09
+
+Bug Fixes
+~~~~~~~~~
+- Added order creation exception handling according to the ccxt manual
+  :issue:`315`
+- Rounded up the filled amount to avoid unclosed orders :issue:`309`
+- Correct the retry of the fetch trades method in case of a
+  timeout :issue:`321`
+- Fixed the extra history candles fetch in live mode :issue:`323`
+- Fixed the marketplace list function :issue:`327`
+
+Build
+~~~~~
+- Added the ability to set a future start_date on live mode :issue:`318`
+
+Version 0.5.9
+^^^^^^^^^^^^^
+**Release Date**: 2018-04-24
+
+Documentation
+~~~~~~~~~~~~~
+- Added explanation describing the storing of the algorithm state in live mode :issue:`224`
+- Addition of
+  `Api Reference <https://enigma.co/catalyst/appendix.html>`_
+
+Bug Fixes
+~~~~~~~~~
+- Lowered order size limit to fit all supported exchanges :issue:`296`
+- Added a graceful finish to a live run with a specified end date :issue:`302`
+- Added commissions to `daily_stats` Dataframe :issue:`304`
+- Fixed an issue regarding `str_btc` on Poloniex :issue:`307`
+- Fixed the last candle returned in backtest in minute mode to be partial (as in live mode)
+  :issue:`266`
+
+Build
+~~~~~
+- Upgraded `CCXT` version to 1.12.131
+- Updated Data Marketplace to enable submitting several files in a publish command.
+- Improved Data Marketplace ingestion.
+
 Version 0.5.8
 ^^^^^^^^^^^^^
 **Release Date**: 2018-03-29
@@ -23,7 +77,7 @@ Build
 
 Bug Fixes
 ~~~~~~~~~
-- fixes in storing and loading the state :issue:`214`, 
+- Fixes in storing and loading the state :issue:`214`,
   :issue:`287`
 
 Version 0.5.6

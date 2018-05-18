@@ -204,8 +204,8 @@ def ipython_only(option):
 )
 @click.option(
     '-c',
-    '--base-currency',
-    help='The base currency used to calculate statistics '
+    '--quote-currency',
+    help='The quote currency used to calculate statistics '
          '(e.g. usd, btc, eth).',
 )
 @click.pass_context
@@ -224,7 +224,7 @@ def run(ctx,
         local_namespace,
         exchange_name,
         algo_namespace,
-        base_currency):
+        quote_currency):
     """Run a backtest for the given algorithm.
     """
 
@@ -253,8 +253,8 @@ def run(ctx,
     if exchange_name is None:
         ctx.fail("must specify an exchange name '-x'")
 
-    if base_currency is None:
-        ctx.fail("must specify a base currency with '-c' in backtest mode")
+    if quote_currency is None:
+        ctx.fail("must specify a quote currency with '-c' in backtest mode")
 
     if capital_base is None:
         ctx.fail("must specify a capital base with '--capital-base'")
@@ -283,7 +283,7 @@ def run(ctx,
         live=False,
         exchange=exchange_name,
         algo_namespace=algo_namespace,
-        base_currency=base_currency,
+        quote_currency=quote_currency,
         analyze_live=None,
         live_graph=False,
         simulate_orders=True,
@@ -344,7 +344,7 @@ def catalyst_magic(line, cell=None):
     '--capital-base',
     type=float,
     show_default=True,
-    help='The amount of capital (in base_currency) allocated to trading.',
+    help='The amount of capital (in quote_currency) allocated to trading.',
 )
 @click.option(
     '-t',
@@ -393,14 +393,21 @@ def catalyst_magic(line, cell=None):
 )
 @click.option(
     '-c',
-    '--base-currency',
-    help='The base currency used to calculate statistics '
+    '--quote-currency',
+    help='The quote currency used to calculate statistics '
          '(e.g. usd, btc, eth).',
+)
+@click.option(
+    '-s',
+    '--start',
+    type=Date(tz='utc', as_timestamp=False),
+    help='An optional future start date at '
+         'which the algorithm will start at live',
 )
 @click.option(
     '-e',
     '--end',
-    type=Date(tz='utc', as_timestamp=True),
+    type=Date(tz='utc', as_timestamp=False),
     help='An optional end date at which to stop the execution.',
 )
 @click.option(
@@ -436,7 +443,8 @@ def live(ctx,
          local_namespace,
          exchange_name,
          algo_namespace,
-         base_currency,
+         quote_currency,
+         start,
          end,
          live_graph,
          auth_aliases,
@@ -455,8 +463,8 @@ def live(ctx,
     if algo_namespace is None:
         ctx.fail("must specify an algorithm name '-n' in live execution mode")
 
-    if base_currency is None:
-        ctx.fail("must specify a base currency '-c' in live execution mode")
+    if quote_currency is None:
+        ctx.fail("must specify a quote currency '-c' in live execution mode")
 
     if capital_base is None:
         ctx.fail("must specify a capital base with '--capital-base'")
@@ -480,7 +488,7 @@ def live(ctx,
         data=None,
         bundle=None,
         bundle_timestamp=None,
-        start=None,
+        start=start,
         end=end,
         output=output,
         print_algo=print_algo,
@@ -489,7 +497,7 @@ def live(ctx,
         live=True,
         exchange=exchange_name,
         algo_namespace=algo_namespace,
-        base_currency=base_currency,
+        quote_currency=quote_currency,
         live_graph=live_graph,
         analyze_live=None,
         simulate_orders=simulate_orders,
