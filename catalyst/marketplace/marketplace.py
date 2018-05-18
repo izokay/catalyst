@@ -279,7 +279,17 @@ class Marketplace:
             address, Web3.toHex(dataset)
         ).call()
 
-
+        if subscribed[5]:
+            print(
+                '\nYou are already subscribed to the "{}" dataset.\n'
+                'Your subscription started on {} UTC, and is valid until '
+                '{} UTC.'.format(
+                    dataset,
+                    pd.to_datetime(subscribed[3], unit='s', utc=True),
+                    pd.to_datetime(subscribed[4], unit='s', utc=True)
+                )
+            )
+            return
 
         print('\nThe price for a monthly subscription to this dataset is'
               ' {} ENG'.format(price))
@@ -479,9 +489,6 @@ class Marketplace:
         provider_info = self.mkt_contract.functions.getDataProviderInfo(
             Web3.toHex(ds_name)
         ).call()
-
-        print(provider_info)
-
 
         if not provider_info[4]:
             print('The requested "{}" dataset is not registered in '
