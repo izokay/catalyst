@@ -8,7 +8,6 @@ import shutil
 import sys
 import time
 import webbrowser
-import pathlib
 
 import bcolz
 import logbook
@@ -28,7 +27,6 @@ from catalyst.marketplace.marketplace_errors import (
     MarketplaceNoCSVFiles, MarketplaceRequiresPython3)
 from catalyst.marketplace.utils.auth_utils import get_key_secret, \
     get_signed_headers
-from catalyst.marketplace.utils.bundle_utils import merge_bundles
 from catalyst.marketplace.utils.eth_utils import bin_hex, from_grains, \
     to_grains
 from catalyst.marketplace.utils.path_utils import get_bundle_folder, \
@@ -196,11 +194,12 @@ class Marketplace:
               '{}\n\n'.format(etherscan))
 
     def _list(self):
-        data_sources = self.mkt_contract.functions.getAllProviders().call()
+        num_data_sources = self.mkt_contract.functions.getProviderNamesSize().call()
+        data_sources = [self.mkt_contract.functions.getNameAt(x).call() for x in range(num_data_sources)]
 
         data = []
         for index, data_source in enumerate(data_sources):
-            if index > 0:
+            if index >= 0:
                 if 'test' not in Web3.toText(data_source).lower():
                     data.append(
                         dict(
@@ -434,8 +433,8 @@ class Marketplace:
         ensure_directory(bundle_folder)
         if os.listdir(bundle_folder):
             zsource = bcolz.ctable(rootdir=tmp_bundle, mode='r')
-            ztarget = bcolz.ctable(rootdir=bundle_folder, mode='r')
-            merge_bundles(zsource, ztarget)
+            ztarget = bcolz.ctable(rootdir=bundle_folder, mode='a')
+            ztarget.append(zsource)
 
         else:
             shutil.rmtree(bundle_folder, ignore_errors=True)
@@ -517,6 +516,8 @@ class Marketplace:
         )
         if r.status_code == 200:
             log.info('Dataset downloaded successfully. Processing dataset...')
+            bundle_folder = get_data_source_folder(ds_name)
+            shutil.rmtree(bundle_folder, ignore_errors=True)
             target_path = get_temp_bundles_folder()
             try:
                 decoder = MultipartDecoder.from_response(r)
@@ -564,6 +565,13 @@ class Marketplace:
         bundle_folder = get_data_source_folder(ds_name)
         z = bcolz.ctable(rootdir=bundle_folder, mode='r')
 
+        # if start is not None and end is not None:
+        #     z = z.fetchwhere('(date>=start_date) & (date<end_date)', user_dict={'start_date': start.to_datetime64(),
+        #                                                                          'end_date': end.to_datetime64()})
+        # elif start is not None:
+        #     z = z.fetchwhere('(date>=start_date)', user_dict={'start_date': start.to_datetime64()})
+        # elif end is not None:
+        #     z = z.fetchwhere('(date<end_date)', user_dict={'end_date': end.to_datetime64()})
         df = z.todataframe()  # type: pd.DataFrame
         df.set_index(['date', 'symbol'], drop=True, inplace=True)
 
@@ -789,36 +797,30 @@ class Marketplace:
         if not filenames:
             raise MarketplaceNoCSVFiles(datadir=datadir)
 
+        def read_file(pathname):
+            with open(pathname, 'rb') as f:
+                return f.read()
+
         files = []
-
-        # Create 'published' directory
-        published_files_dir = 'published'
-        pathlib.Path(published_files_dir).mkdir(parents=True, exist_ok=True)
-
         for idx, file in enumerate(filenames):
             log.info('Uploading file {} of {}: {}'.format(
                 idx+1, len(filenames), file))
-            files = []
-            files.append(('file', open(file, 'rb')))
+            files.append(('file', (os.path.basename(file), read_file(file))))
 
-            headers = get_signed_headers(dataset, key, secret)
-            r = requests.post('{}/marketplace/publish'.format(AUTH_SERVER),
-                              files=files,
-                              headers=headers)
+        headers = get_signed_headers(dataset, key, secret)
+        r = requests.post('{}/marketplace/publish'.format(AUTH_SERVER),
+                          files=files,
+                          headers=headers)
 
-            if r.status_code != 200:
-                raise MarketplaceHTTPRequest(request='upload file',
-                                             error=r.status_code)
+        if r.status_code != 200:
+            raise MarketplaceHTTPRequest(request='upload file',
+                                         error=r.status_code)
 
-            if 'error' in r.json():
-                raise MarketplaceHTTPRequest(request='upload file',
-                                             error=r.json()['error'])
+        if 'error' in r.json():
+            raise MarketplaceHTTPRequest(request='upload file',
+                                         error=r.json()['error'])
 
-            # Move file to published directory after successful upload.
-            moved_file = published_files_dir.join(file.rsplit(datadir))
-            shutil.move(file, moved_file)
-
-            log.info('File processed successfully.')
+        log.info('File processed successfully.')
 
         print('\nDataset {} uploaded and processed successfully.'.format(
             dataset))
