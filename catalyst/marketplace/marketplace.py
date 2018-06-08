@@ -209,28 +209,13 @@ class Marketplace:
         return pd.DataFrame(data)
 
     def list(self):
-        num_data_sources = self.mkt_contract.functions.getProviderNamesSize().call()
-        data_sources = [self.mkt_contract.functions.getNameAt(x).call() for x in range(num_data_sources)]
-        data = []
-        for index, data_source in enumerate(data_sources):
-            if index >= 0:
-                provider_info = self.mkt_contract.functions.getDataProviderInfo(
-                    Web3.toHex(data_source)
-                ).call()
-                if 'test' not in Web3.toText(data_source).lower():
-                    data.append(
-                        dict(
-                            dataset=self.to_text(data_source),
-                            price=from_grains(provider_info[1]),
-                            subscribers=provider_info[3]
-                        )
-                    )
-        df = pd.DataFrame(data)
-        url = 'https://enigma.co/marketplace/status/'
+        df = self._list()
+
         set_print_settings()
-        print('\nVisit {url} for additional information on data sources.\n\n{df}'.format(
-            url=url,
-            df=df))
+        if df.empty:
+            print('There are no datasets available yet.')
+        else:
+            print(df)
 
     def subscribe(self, dataset=None):
 
@@ -849,7 +834,7 @@ class Marketplace:
             while True:
                 print(df_sets)
                 dataset_num = input('Choose the dataset you want to '
-                                    'get withdraw amount for to [0..{}]: '.format(
+                                    'get the withdraw amount for [0..{}]: '.format(
                                         df_sets.size - 1))
                 try:
                     dataset_num = int(dataset_num)
@@ -876,8 +861,8 @@ class Marketplace:
                   'the Data Marketplace.'.format(dataset))
             return
 
-        withdraw_amount = self.mkt_contract.functions.getWithdrawAmount(Web3.toHex(dataset.encode())).call()
-        print(withdraw_amount)
+        withdraw_amount = from_grains(self.mkt_contract.functions.getWithdrawAmount(Web3.toHex(dataset.encode())).call())
+        print('{} ENG'.format(withdraw_amount))
 
     def withdraw(self, dataset=None):
         if dataset is None:
@@ -890,7 +875,7 @@ class Marketplace:
             while True:
                 print(df_sets)
                 dataset_num = input('Choose the dataset you want to '
-                                    'get withdraw amount for to [0..{}]: '.format(
+                                    'withdraw from [0..{}]: '.format(
                     df_sets.size - 1))
                 try:
                     dataset_num = int(dataset_num)
